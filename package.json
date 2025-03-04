@@ -1,0 +1,19 @@
+{
+    "name": "expedia_merchant",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "dev": "nodemon app.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "axios": "^1.7.9",
+        "ejs": "^3.1.10",
+        "express": "^4.21.2",
+        "request": "^2.88.2",
+        "request-promise": "^4.2.6"
+    }
+}
