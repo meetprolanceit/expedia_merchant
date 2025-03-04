@@ -1036,7 +1036,7 @@ const signIn = async (req, res) => {
             cookies: globalCookiesForLogin,
         });
 
-        if (authenticateByPasswordResponse.status !== 200) {
+        if (authenticateByPasswordResponse?.status !== 200) {
             return res.status(400).json({ message: 'something went worng!' });
         }
         const signInFcToken = await createLoginFCToken();
@@ -1050,10 +1050,10 @@ const signIn = async (req, res) => {
             ctxViewId: initialPage.ctxViewId,
         });
 
-        if (submitPasswordResponse.status === 200) {
-            return res.satau(200).json(submitPasswordResponse.data);
+        if (submitPasswordResponse?.status === 200) {
+            return res.status(200).json(submitPasswordResponse.data);
         } else {
-            return res.satau(400).json('something went worng');
+            return res.status(400).json('something went worng');
         }
     } catch (error) {
         console.log(`🚀 ~ signIn ~ error:`, error);
