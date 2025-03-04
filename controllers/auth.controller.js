@@ -51,6 +51,8 @@ const initialPageRender = async () => {
 
         const response = await axiosRequest({ config });
 
+        console.log(`🚀 ~ initialPageRender ~ response:`, response);
+
         const initialPageCleanedResponseData = response['data'].replace(/\\"/g, '"');
         const initialPageCookies = response.headers['set-cookie'].map((el) => el.split('; ')[0]).join('; ');
         const loginCsrfToken = initialPageCleanedResponseData.match(tokenPatterns.loginTokenPattern)[1];
@@ -681,6 +683,201 @@ const setpasswordotp = async ({ csrfToken, userDetails, cmsToken, userAgentId, t
     }
 };
 
+//function for the call IdentityAuthenticateByPasswordFormQuery api
+const loginAuthenticateByPassword = async ({ userDetails, DUAIdToken, ctxViewId, cookies }) => {
+    try {
+        let data = JSON.stringify([
+            {
+                operationName: 'IdentityAuthenticateByPasswordFormQuery',
+                variables: {
+                    request: {
+                        emailInput: userDetails.email,
+                        authenticationFlowVariant: 'DEFAULT',
+                    },
+                    context: {
+                        siteId: 27,
+                        locale: 'en_GB',
+                        eapid: 0,
+                        tpid: 27,
+                        currency: 'INR',
+                        device: {
+                            type: 'DESKTOP',
+                        },
+                        identity: {
+                            duaid: DUAIdToken,
+                            authState: 'ANONYMOUS',
+                        },
+                        privacyTrackingState: 'CAN_TRACK',
+                        debugContext: {
+                            abacusOverrides: [],
+                        },
+                    },
+                },
+                extensions: {
+                    persistedQuery: {
+                        version: 1,
+                        sha256Hash: '485127f3a97df8fb29fcdc5b6a61b56a04c399f0805eb610bc248cc2835ebfa8',
+                    },
+                },
+            },
+        ]);
+
+        let config = {
+            method: 'POST',
+            url: 'https://www.expedia.co.in/graphql',
+            headers: {
+                accept: '*/*',
+                'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+                'client-info': 'g-auth-ui-v2,8eb087574902cef0a5ee8fc94349ddaa9b007c77,us-west-2',
+                'content-type': 'application/json',
+                cookie: cookies,
+                'ctx-view-id': ctxViewId,
+                origin: 'https://www.expedia.co.in',
+                priority: 'u=1, i',
+                referer:
+                    'https://www.expedia.co.in/enterpassword?uurl=e3id%3Dredr%26rurl%3D%2F%3Flogout%3D1&scenario=SIGNIN&path=email',
+                'sec-ch-ua': browserIdentifier,
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Linux"',
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-origin',
+                'user-agent': userAgent,
+                'x-hcom-origin-id': 'Login',
+                'x-page-id': 'Login',
+            },
+            data: data,
+        };
+
+        const response = await axiosRequest({ config });
+
+        console.log(`🚀 ~ loginAuthenticateByPassword ~ response:`, response);
+
+        const csrfToken =
+            response.data[0].data.identityAuthenticateByPasswordForm.signInButton.action.accountTakeOverWidgets[0]
+                .token;
+        return {
+            cookies: response.headers['set-cookie'].map((el) => el.split('; ')[0]).join('; '),
+            csrfToken,
+            status: 200,
+        };
+    } catch (error) {
+        console.log(`🚀 ~ loginAuthenticateByPassword ~ error:`, error, JSON.stringify(error.response.data));
+        return { message: JSON.stringify(error.response.data), status: error.status };
+    }
+};
+
+//call the submit password api
+const submitPassword = async ({ userDetails, DUAIdToken, csrfToken, signInFcToken, cookies, ctxViewId }) => {
+    try {
+        let data = JSON.stringify([
+            {
+                operationName: 'IdentityVerifyPasswordAuthenticateSubmitMutation',
+                variables: {
+                    context: {
+                        siteId: 27,
+                        locale: 'en_GB',
+                        eapid: 0,
+                        tpid: 27,
+                        currency: 'INR',
+                        device: {
+                            type: 'DESKTOP',
+                        },
+                        identity: {
+                            duaid: DUAIdToken,
+                            authState: 'ANONYMOUS',
+                        },
+                        privacyTrackingState: 'CAN_TRACK',
+                        debugContext: {
+                            abacusOverrides: [],
+                        },
+                    },
+                    request: {
+                        password: userDetails.password,
+                        atoInputs: [
+                            {
+                                type: 'CSRF',
+                                inputs: [
+                                    {
+                                        key: 'token',
+                                        value: csrfToken,
+                                    },
+                                ],
+                            },
+                            {
+                                type: 'CAPTCHA_WEB',
+                                inputs: [
+                                    {
+                                        key: 'fc-token',
+                                        value: signInFcToken,
+                                    },
+                                ],
+                            },
+                            {
+                                type: 'TRUST_WIDGET',
+                                inputs: [
+                                    {
+                                        key: 'payload',
+                                        value: 'eyJjb25maWd1cmVkRGVwZW5kZW5jaWVzIjpbeyJuYW1lIjoiaW92YXRpb25uYW1lIiwicGF5bG9hZCI6IjA0MDBjcHBkWGFSOW9wbVZlYkthdGZNaklGQ1NJaDVnb3VnWVhxRzgwQ2pvOUFHbHJ0Vk1lZlI4WUR1ekFxd3NOT3ljRDhORnExR3Yvcko2cGJFNWVMcmoyMlRtT3FMQTNTblJ3Nyt0MGFmYk96M2daNDNpQmtCMTdaWkwyUnpUOVZDcmVERk9JbWpqWVZKOFEvOHcrUGNxNk1HRFpTMU9Uak1pOFZXbzRvMS82SlMwYmNlcVVVSXU5ZWxIWFVMSEN2MVpiajdjRmxRL1BTR2trcWxCdElCeSs4WDQzMnlZcit0TUYvWFkzc3kwWm9wYmZuOGgvZmNuTi82YSs5YUErZXRhS2g2TUt5bEVLSnh6aTJOcXZjQmRDSDZ5VnNEdTgxdzhUbjNTY2ZyQmZZVER2NjNScDlzN1BlQm5qZUlHUUhYdGxrdlpITlAxVUt0NE1VNGlhT05oVW54RC96RDQ5eXJvd1lObExVNU9NeUx2VVNiSitMdHozUjMrMWxMWXFIWkVraHJadDI0MEhhckhOTHp5VnJQdDVuWE41a2RHWnFxZDdJTTUvWklxZUxjdUR6VVZKK0ZiRzVjeEIxeWl2ZmtyMU1mL0Vya1VvNUNwbklKNmFhbGx2V083UC96QUExbW5WTUsvWlJDU0RQMVVXZ0NGNmVQd1BxQjNpR014R0RxZ1Yyc2VOYmVvZDVDUzQzdWtlVTFQNVQwWUxYdU9XZUZ6cTNvTDJhWEdpVERwaC9UK2xNbFJUQTI3Z3hYTDlwaS9ESjBxQ2M0Z01wZXJnZWNTbzA2aXpWenFlTW1CQ0gvaTljbUtyTFF4Y3hBNU9FMktrT1plLzBqWHprNzdJTFovZVVzUTdSTnJMcm8xa1RLSXMxNDk2WWtwSWgzQTcwN2xtMmUyNVNRYm8xUFBTMVUzdTJpeWh3WXNNemg5bVJMNGVGVW9XMlBoRlFUTmZTRXplMEFuR3lLUHJYdE9BdHE1RXM0cmlBSEZUeTk2bEJnejMwcmtKN1VhQ1NBN1pHWkNobHo1d2xSRndXSmkwRlJ1bHJ1WFFZUW9ubXdST3VpQ0JKVnc5SVJETGIwSmRxSmF6WUZEVDFsWnFBTGpCbEo4eGlKNndiT1NyYTQ1N1JIRlpsdFpERmQ2b1gvRmxUdDFrcDYyeVVqY2lMRk1BUnhlNEVVOVhlZVJVMG1RVFVGckZGQU42UTF4ODBVZENkR2R5cXd3YlRLZGVTZzRQK3VqSFJIMjlFMlBsNjh2TjBYcGVGdFJ4eFJRRGVrTmNmTkZIUW5SbmNxc01HMHluWGtvT0Qvcm94MFI5dlJOajVldkx6ZEY2WGhiVWNjVVVBM3BEWEh6UlIwSjBaM0tyREJ0b042aWpZZ2JKM1pqalpTa0JUQlZpSHhnUFZqNGVOL042MVFueTVGT2hlOS9EWFRGOEQ3SEFIeTc5cEdFMkhnMzk2Rk9wUGV2RFd0SDJYUjBRa2ZPZDAyRDczbjgxeDZoRU1DeTBzM2hSTG4wOFRoOUZsTkhEUGJLUlhleTA2Y1k0YTdldUZxaU1VZ3pxYndwbVdhOEl4OXNjNDI0YzVWNStGOStWTkhsY3oyVndBR0VkM0g0TDk1MlJBVVBLd0N6TFFBZlphQTdqU2l3SEhyRFczSFNZeG5Qc2UyWkpDc3E0ZTNmMXUvRVR6cDVWcGdrUVhUUXpaMmJDa1VreC9pRGcxeFFvNjZGVzh1LzRQb1RYdWhyOUZVOE5ndUtFTnFlcjFuTnRQOE9FQ2trLzY0bEtvcU0zd0RvcmNlTkZBODJML0RtdVRab3RSUmgrWEtOb05tRDI1RGF3RnhMMjFzT2NZdjFJRUFSODhmeGVOUVFUbXpoY0VzblI0QU4yOTdvTGc4MUZTZmhXeHVYTVFkY29yMzVLOVRIL3hLNUZLT1F4UTJxMlZPNTFjWjFDNG5lNHFVY241MCtZZmtPYndESWQ4UVh6VDRCeEFmZnlsTElnS0FsSFNaM1pKdmFHejZ5L2JIRTRjMWVYckcrdklocGdSL09tZ3QzNnJzaDIrMDdaQmx6b0V4M0ZySEZ2VTRabU1mZFk0TnlHNzdhVWEvMVhuamMveHlKa0xHMTJBZm1zcTgrSDRjcU9lQUNQKzVyK3FPaGZ3M2FkU3VDRnNoTjk5anh1SGhtQndDV2U1N1E3Q3UrWGdtSzJDbC85Mm5sZktnRXlXeVlsdWZOUTVVc2o0TjlzNlVQbkYvWEhzcE9NOElwcWtRWFBlMUtyOEQxREMxVmd3WUpUVVBLWlVMdHY4dWp5K2NwK0N2M2lwVHg4bDdVSU00aGxkZEszK2VYN3Q0VFM2UmJTbDUxaTJkdUJlK1h1emV1ZlhHZzhFTDdzKzllVVNnVmxZUTlqNm1BU3B6UFYydXcydE9hanAwZW1IdW52UUQ2bWJNcTJwWmFGVlNqS05BSGE3NkZtTFpid2tZR3VOcGtBK2FlZk90MlNiT3EzWFRiY0t0cnhrQ1lidmg2RUhZeFdKMG91TEN3RCtLdjdlb3BqSzhvMDYvekJIdDlKQmwvZGhDQi9ZQzlxS2pDTU9nczZaMEpJM3NwbFpLbFFDUHkrazZJY1d2UjY1dVFvSWk4cUhuWmhWVndtbU9oS3JnVm81U01DRVNMV3Q2V09samtsRndjRG4yMnQxQ3RxVmFMZGpuTURjdUVJU0JKNlZHQnpnbTFzY1BrT2JuRFBzUW1IeVZLQ2ZTSnpFM1NKdG1LWHhuOWgyVE1zMG5rRVRqd1JJRWh3Tm0rNmtTME1uaDVFczJLenIxZ2pDSlcrRFVydDZvenlrbWtlcVl3WHR1V0xMMmhwMVluQnBEZ2pDM1VTNC9zN1poNzRsUHJCdWZBZmVlUkF0azE5ZGZ0VWZCWHd5dXlpT0ZYRmhuQU0yaUtkeHdycUdGeXQ5NURZV3VhTDRaRUZ4S0l0dk9CSHVKS1l3TzlFcnFhQTU0NzR1eFQ3Tk54SGRDa2p2U3lHQnFoNVFsajFmdmNRK2pOUVhYa2RPdU9LUDB0Rmsxc05mSkpmMWo1VUQ1SGRWSmxtVm5KUWdaVlRIb2sxT2xkdStWV3NXNHNLSmswanNZUjJBTTR2cHQyMElNYkFKZFAxR2FncjRiQkgvYk11cVo3d05BK09BZC83eUtuV3FvRW04WFFyVElnemRpNGszMmRDTDlhcmhZMEdmeWp2WHFPTnM4d3pZUi9GQTF2aS9VaFhxZzJHQVBBZ2UvRCtxUDhORXJRSjkzeS9WYTJKOFVtVTE1KzZqNFA0MzFVYnlSQkNaMmNGRndsaWlKUnVLK1czV2dpaGhuY2ZxMitKUUVLcXZaNytDUEh4VjFheGlwMFdJQm9yK0NiMy9rV2NWNm81SE5VcHE5YnJvcDY3c1ZQSDQ5TFZvQi8walV1QnB2UlRhYk1lVUIrcGlWZUM2RTZIT09wUEdjbzltVzgxdHhTZm1OT2ZYamVKSzdlRzF1aDhlOU0wTXp5TW9PWkJ0K3BvRXBCdjVCaUZIQnd4cmtpajZMM0h6TjNuREVmcmYxU3RwM2kwbVRXbC9ia3g1VDEvV1NNVnJjYnRRVmQ4ejhjRjRWeVJlUWdaUTdWcEtqWEtFRzhZck5NQVVvZG0zc1RaQ0JnMmtwYjd5RHRyOU1DY05SRk16L0F6Ynh4Vm90Mk9jd055NFFIc3YxYVJRdjFONS8yaHp6TFltMkNnV1J2ZmF0RG9qTW9TZ2FBU0E0MU50dWI1UmdmaWY5UmpoSnNvbVJCSC9SRm9uUkwrclppTkRqd1JJRWh3Tm0rQ2I5RURTeFlFY3hMRGQ4U1BoelFHQWh5SnJ0N3l6bHNYalZ4RWF3UVZFZWRmKzVHbGwxRzJNTmx6WC9sanBkVzlRNnZKMUVzQmphT0VteWlaRUVmOUpsS1h1RlZrWmtweGVtRkVDOG5leFdhSFFUYXZzOU92K3ZJZ2tPWTMwckJ5elFVc1cvTjRTT25MN3RDSXEyZ24xc014eURaQ0QvYU5jK3pSbnRJSDErYitOWnMydjhQK3lYVXdROTJ3dk4vV2tIdUUvSmNpdmhMSDJhUkNJV2d3dHVzcUVZV09SaVV3OVBXQklGY1QwYkQzM1VaK3BTVzFJaXpaSytSR1FKcER2OVJhcjRKcVNFZk43V0pwWklDV3hhUm5hVlhWV2ZUU01LR1BNbnRydEtpVXdXNVJXOFdERGJYd3dHQW16aStmeFp2aTBwcldpb2hqZkFjK1pkc3AvVHh2WW1NUTdZRllpOHFKdG9nZzdpNzhnOUN6MXFEWmcwQ2diSjFFNG9US0NvdU55K3B4MUh3NWJpY0FwcHg2dldFMzF6RnFYZ2JRQWFOWVVoTXJhTklITnVLVnNHRFZ2NEFsU05mcVJ5aEVmY0Q3WWZtd3lLa0FHM2IvaVZET0ZYR1pmeVV1SDY4OE40aEJ2UnNiNTlSN0FFaHBCb2Y2NWFYcS9kQVZYWHVDYmc2YThsVnRPQTgwN1p3WGM2QnJ1NVBQbUFJRldCbTswNDAwdmU2NUtsRlBJdlNWZWJLYXRmTWpJS3IxdTMvTVFzUko4eUJxZWxRNzlobG5abi9UekFhZkIwb0tqWFV5RDV3b2ZTUFpXcU5LVmNxUzFrYmlpcndzQkdJUEFyakRyZVRDVDQzUjVqK284dzR4QlZrcVMrTENmd1lnSTBNZ2J1RjR1SkJzWmJjNUtUV3FqVTV1ZC9IVllXWjNjQXlVRGt5YTcxRW15Zmk3YzkwZC90WlMyS2gyUkpJYTJiZHVOQjJxeHpTODhsYXo3ZVoxQjg0SVVheXdFRy9qdVkzNmFWZHYrd0p6dUR2VWN3WC9EM0F6WStWTkdwRStUczM3MWErcS92RlVxZDBlR2dvdFZhd0Zmd1NKTzhoU0t3aXAvS2tKRjZ6M24wMUFhc3lrdERFcDljb3Nqb0laUTlxbEp6V2VCSFJia2pRa1ZtRVZXeGhFMWVUOHhGNnk2YXcxV0xJQ09SSUtzcFhzbkszWWNQQnQ3NTNibEU0QVVDYktuMjcyZEVFK0VHMUt0Tm1ReEk2UG1wTEZwbUVia1poWUp1bk02OGlDUTVqZlNzRnkyMG1LK2VvUklnMS8zaVdLelhPMktoUDBEVU5LR0FCU0lwRGxXb09KNjFPZzNxa3VyVUZ5dFBYVlcxUndxaDg3N3NsWUt3WFNMQ2pUci9NRWUzMGtPZnVyVG1aejdodUx1bkVJUG1RSDMrVXZoSXJpczhHaFNtU1MzSkhMTThwd0JzaUhENkFaWHZXSWZLRzVXVnJHZXgxVExBUnliVXI0WDM1VTBlVnpQWlhBQVlSM2NmZ3YzblpFQlE4ckFMTXRBQjlsb0R1TktMQWNlc05iY2RKakdjK3g3WmtrS3lyaDdkL1c3OFJQT25sV21DUkJkTkROblpzS1JTVEgrSU9EWEZDanJvVmJ5Ny9nK2hOZTZHdjBWVHcyQzRvUTJwNjhodFl5UisxS0lpZk9xMXZHMkNPZjdic2ZGWXpBYUZLb2RYeVVLeFVnVnRaKytMYVhEcXVJRFg4aWNPV1BaY3k0WG82SlIrbzh1TmgyQmVhTW1SeVh0MU1SZGJFT0YyaTJCTDNjeDE3SUJQckp6L2ZrbG9jTWFSNExsSWNJY3M4aElxS3JqSytnZDVYaFJZTjBwOEw0NUV4SmxzRUR5V2Vad2hqeGlvZHRZckF0amd6SE1HQWtMVExrRU40TDdFZkk4STdPUW10djhBWFlZcHZieXYxTEVPVnptSnREcWltd0xZNE14ekJnSkMweTVCRGVDK3hIeVBDT3prSnJiL0FGMkdLYjI4cjlTeERsYzVpYlE2b3BzQzJPRE1jd1lDU21rZ0ZwN3RTSTlPc2hhSFlQOE9xNmsrY1ZYSmlWMnlMdWh6bUhWaHV4S0dhbmlIZ2gyd3lkdTVpR1JtU2hDb2U4VkRkTEdCZks5UEgvTGduQXRNVGc2eU5vLzg5dHVOMUU0MnlzMmFWRFFYUXFoNWNDL3NEMDYzN0ZVNHN3UUpUWG0wWEJ0dmsyUlcyczBmTzMzbDQrQmV6NmhCQnpyUzJ1c2EyampoMFZuK1RRSGp5N0g1WGhMSENIQUdZM0owanBMcVZyU1Z6c0kxTEI2TTVmbDJFb01FQW9FaXRFdHRGVW8xRFJrVXRQR0hGVEk2anlNcDBza1R2bHFCZEMxMlBtWTFYcERHQnR5V0Y4aFJ3VzdKc3NzMjlMMHNGa1FQbWdlVTBuTVVabDdFc2dGZmVUVTZGMjhCL010YzFrcVpDTmM1NTdYSm9QRjNENXcwb1c2TU1LMkY2TndVd2w5b2JJUkdEb1FZL0VrRklpa09WYWc0bnJVNkRlcVM2dFFYSjJuTmtsQ1hmVUZ3alVtUmNnSHJCR2cwQ1lRcVRzSTEyMmhzSUs2dFYwWGxqL1hMQlZBTFdLdWJkeWU0WmZ5K2hqZHZ6MTV5elVCTFdxeEZuWjh6aERhR0g1RHNmT21WeHBGb2MyMUdxSnJ3ckl1aDR6WHMycmt6QkJ0bVNnVmt1N2tBalV0cmp4ZVJ0THhSQUVuRi9xNktCWFlOdlprOXRhRmpQRzkvRHVuYlhtcXFzN0FSNjhaZlM5dTA0bHdNTWwxTUVQZHNMemYxcEI3aFB5WElyNFN4OW1rUWlGb01LVC9IaW8xLy81OXNQVDFnU0JYRTlHT0dpYzZES1lkbklWNFQ1bVZ1SXNkTUMrK2tIOUU0ZEpYUElnY2RMemZuV2lVdlM0ZUs5aFBLU3F6SWV5aWJlYldnaHFSNDJDNStFRzM2bWdTa0cva0dJVWNIREd1U0tQb3ZjZk0zZWNNUit0L1ZLMm5lTFNaTmFYOXVUSGxQWDlaSXhXdHh1MUJWM3pQeHdYaFhKRjVDQmxEdFdrcU5jby9JNjBJK1NKU1hFSEtveFhSaU85bDRac2tEdG41RWpTQU1KL2h6VmNHVnlEN0dETi9TYlJDYlVOSGU0Q2hiT2JRbDRDcEFCWHhJWmpQaDR4QzVZQVNZNW01STgrRHRaWWhxaGdWNDA5czJ6UWRrMHRTWXAzQi9VZ3F5aUJWdDZweWYvVVZVQ2JrU2FsTU1lazRsVWpjdGVkK3RybTRlY1BqWjlFVDA4d1A1Q29xVUFpZzdsb09iOUtIVkNYWHZ3a3ZsMkRwU2F0bDRWTlN0VkVEcCtPc2dQOC9FSXV5dFFHM0pyZStXYi9qUGNFYnNWQXROcFNINmdKdVl5UGNSY1R0R2FsMlFaSmtGL3czLzBUUk5SOHJJK3ZKVVY3VS9yTGc1elFsMTVIWDlpMXBXRzhjV0syZm8vNW54ZDdXbG9lWDAwRzhPOC9qZ1BmL2FtdytBUndoajY3MFFncGI5T00waGd3aWRzZmtqVEF0MGRIRzc5N0FhZDNqdTNCZHBWN1VoaHUxOGx1dDdCbnBhb3VUN1Zwb3N0L2VTYTZmYlNMbGVPTlhtdXZtYjRzaXB4aFQ1eTJ4QzBBUkJONGl3ZzJXUWtyZFJDMzZsaTE2bmtWUVAxVWZLczFBVE9ncDBRYkwyTjhtbUc4eVpwQ1NPUDhGL2V5QUladmYzNld1cFVPWGZkOFA4SVJjcjBYbXBNTk01UHNhQWlrSGVPSi9YWm1NTWRyWE1lWlJrVmkwRlJ1bHJ1WFFRcUtZdkpYemlzd0p1dFI2Skg5blJNYjZDYVZPS1NhZllOK0ZCNUJZOUVvT2NCcmpSd1NyMDdmS1c5UURpWVFzR25BQzF3Z3lkNzYzY29BcmNkOGQrNzArRk9YeEt0dG0wamNlZWZOeW9Ha2huVmhGSUdvK2hTaGlQc0IrS0h6MDk0L29ib3NPa2NHWjlYbVA3aWRPbVI0S0VBT2MrODFab1JLZDBUTFhueWcwUzBHRkdQQ21aclVHc3RqWm5KclVjRmFoYmdsaEE4ZjZpeUY1UXRwRElpL29qSmZaeTlDRjZ5L0dpMkM4WUh1Qk40UjZodUhJZDJucHQ0REMvcUhSZTY4OE0xc3Nrc2lkdmVqckVZR2hGa2U4SWJZOW5RMkFXMVNSSWVDY0FJcjBIWVBLTUhmcWg2ejZ0UnZKUXZiUUFwRm1wK3J0SDE0eGZQd3Rid0ZqcE5CS2lzWjlwWU9jNGtiK1daOHR5ck1SUi9VNFVuMnV0SWdrbTZaREdBSGg0U1B1YjlnMks2aE5rdEwrRm1CbUhtdE8wVW5pNnVzTzlZUkVPTjQ4UC9zV1hvS1JldnBmQm80RTU0UU9aR3Uydz09Iiwic3RhdHVzIjoiQ09NUExFVEUifV0sImRpYWdub3N0aWNzIjp7InRpbWVUb1Byb2R1Y2VQYXlsb2FkIjoxNTcyLCJlcnJvcnMiOlsiQzExMDQiLCJDMTAwMCIsIkMxMDA0Il0sImRlcGVuZGVuY2llcyI6W3sidGltZVRvUHJvZHVjZVBheWxvYWQiOjUwMzM2LCJlcnJvcnMiOltdLCJuYW1lIjoiaW92YXRpb25uYW1lIn1dfSwiZXhlY3V0aW9uQ29udGV4dCI6eyJyZXBvcnRpbmdTZWdtZW50IjoiMjcsd3d3LmV4cGVkaWEuY28uaW4sRXhwZWRpYSxVTFgiLCJyZXF1ZXN0VVJMIjoiaHR0cHM6Ly93d3cuZXhwZWRpYS5jby5pbi9sb2dpbj8mdXVybD1lM2lkJTNEcmVkciUyNnJ1cmwlM0QlMkYiLCJ1c2VyQWdlbnQiOiJNb3ppbGxhLzUuMCAoV2luZG93cyBOVCAxMC4wOyBXaW42NDsgeDY0KSBBcHBsZVdlYktpdC81MzcuMzYgKEtIVE1MLCBsaWtlIEdlY2tvKSBDaHJvbWUvMTMzLjAuMC4wIFNhZmFyaS81MzcuMzYiLCJwbGFjZW1lbnQiOiJMT0dJTiIsInBsYWNlbWVudFBhZ2UiOiIyNyIsInNjcmlwdElkIjoiNjhhMDBjMDMtZTA2NS00N2QzLWIwOTgtZGQ4NjM4YjRiMzllIiwidmVyc2lvbiI6IjEuMCIsInRydXN0V2lkZ2V0U2NyaXB0TG9hZFVybCI6Imh0dHBzOi8vd3d3LmV4cGVkaWEuY29tL3RydXN0UHJveHkvdHcucHJvZC51bC5taW4uanMifSwic2l0ZUluZm8iOnt9LCJzdGF0dXMiOiJDT01QTEVURSIsInBheWxvYWRTY2hlbWFWZXJzaW9uIjoxfQ==',
+                                    },
+                                ],
+                            },
+                        ],
+                        verifyPasswordContext: null,
+                        rememberMe: true,
+                        emailInput: userDetails.email,
+                        referrerURL: '/',
+                        flowScenario: 'SIGNIN',
+                    },
+                },
+                extensions: {
+                    persistedQuery: {
+                        version: 1,
+                        sha256Hash: 'f3f75609a8da5f3983591863a5d2dedce7af2fae083734e10f0682a5783f3086',
+                    },
+                },
+            },
+        ]);
+
+        let config = {
+            method: 'post',
+            url: 'https://www.expedia.co.in/graphql',
+            headers: {
+                accept: '*/*',
+                'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+                'client-info': 'g-auth-ui-v2,8eb087574902cef0a5ee8fc94349ddaa9b007c77,us-west-2',
+                'content-type': 'application/json',
+                Cookie: cookies,
+                'ctx-view-id': ctxViewId,
+                origin: 'https://www.expedia.co.in',
+                priority: 'u=1, i',
+                referer:
+                    'https://www.expedia.co.in/enterpassword?uurl=e3id%3Dredr%26rurl%3D%2F&scenario=SIGNIN&path=email',
+                'sec-ch-ua': browserIdentifier,
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Linux"',
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-origin',
+                'user-agent': userAgent,
+                'x-hcom-origin-id': 'Login',
+                'x-page-id': 'Login',
+            },
+            data: data,
+        };
+
+        const response = await axiosRequest({ config });
+        if (response.status !== 200) {
+            console.log('error response of password--', JSON.stringify(response.response));
+        }
+
+        return response;
+    } catch (error) {
+        console.log(`🚀 ~ submitPasswor ~ error:`, error);
+        return { message: 'Something went worng!' };
+    }
+};
+
 //register page render.
 const registerPage = async (req, res) => {
     try {
@@ -710,27 +907,7 @@ const registerProcess = async (req, res) => {
 
         if (sendEmailResponse.status !== 200)
             return res.status(400).json({ message: 'Something went wrong please try again' });
-        const sendOtpResponseCookie = sendEmailResponse.headers['set-cookie'].map((el) => el.split('; ')[0]).join('; ');
 
-        console.log(`🚀 ~ registerProcess ~ sendOtpResponseCookie:`, sendOtpResponseCookie);
-
-        console.log(
-            `🚀 ~ registerProcess ~ {
-            userDetails,
-            DUAIdToken: initialPage.DUAIdToken,
-            cookies: initialPage.initialPageCookies,
-            ctxViewId: initialPage.ctxViewId,
-            clientInfo: initialPage.clientInfo,
-        }:`,
-            {
-                userDetails,
-                DUAIdToken: initialPage.DUAIdToken,
-                // cookies: `${sendOtpResponseCookie}; ${initialPage.initialPageCookies}`,
-                cookies: initialPage.initialPageCookies,
-                ctxViewId: initialPage.ctxViewId,
-                clientInfo: initialPage.clientInfo,
-            }
-        );
         //IdentityAuthenticateByOtpFormQuery call function get response
         const otpAuthenticateResponse = await identityAuthenticateByOtp({
             userDetails,
@@ -816,7 +993,8 @@ const otpVerifyProcess = async (req, res) => {
         });
 
         if (setpasswordotpResponse.status === 200) {
-            return res.status(200).json({ message: 'Register successfully!' });
+            res.redirect('/api/v1/login');
+            // return res.status(200).json({ message: 'Register successfully!' });
         }
     } catch (error) {
         console.log(`🚀 ~ otpVerifyProcess ~ error:`, error);
@@ -826,17 +1004,67 @@ const otpVerifyProcess = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        // const initialPage = await initialPageRender();
-
-        return res.sataus(200).json({ message: 'Try after some time!' });
+        res.render('login');
     } catch (error) {
         console.log(`🚀 ~ login ~ error:`, error);
         return res.json({ message: 'Something went worng.' });
     }
 };
+
+const signIn = async (req, res) => {
+    try {
+        const userDetails = req.body;
+
+        console.log(`🚀 ~ signIn ~ userDetails:`, userDetails);
+
+        const initialPage = await initialPageRender();
+
+        const otpAuthenticateResponse = await identityAuthenticateByOtp({
+            userDetails,
+            DUAIdToken: initialPage.DUAIdToken,
+            // cookies: `${sendOtpResponseCookie}; ${initialPage.initialPageCookies}`,
+            cookies: initialPage.initialPageCookies,
+            ctxViewId: initialPage.ctxViewId,
+            clientInfo: initialPage.clientInfo,
+        });
+        console.log(`🚀 ~ signIn ~ otpAuthenticateResponse:`, otpAuthenticateResponse);
+
+        const authenticateByPasswordResponse = await loginAuthenticateByPassword({
+            userDetails,
+            DUAIdToken: initialPage.DUAIdToken,
+            ctxViewId: initialPage.ctxViewId,
+            cookies: globalCookiesForLogin,
+        });
+
+        if (authenticateByPasswordResponse.status !== 200) {
+            return res.status(400).json({ message: 'something went worng!' });
+        }
+        const signInFcToken = await createLoginFCToken();
+
+        const submitPasswordResponse = await submitPassword({
+            userDetails,
+            DUAIdToken: initialPage.DUAIdToken,
+            csrfToken: authenticateByPasswordResponse.csrfToken,
+            signInFcToken,
+            cookies: authenticateByPasswordResponse.cookies,
+            ctxViewId: initialPage.ctxViewId,
+        });
+
+        if (submitPasswordResponse.status === 200) {
+            return res.satau(200).json(submitPasswordResponse.data);
+        } else {
+            return res.satau(400).json('something went worng');
+        }
+    } catch (error) {
+        console.log(`🚀 ~ signIn ~ error:`, error);
+        return res.json({ message: 'Something went worng.' });
+    }
+};
+
 module.exports = {
     registerPage,
     registerProcess,
     otpVerifyProcess,
     login,
+    signIn,
 };
