@@ -1,5 +1,4 @@
 const { axiosRequest } = require('../utils/axios.request');
-const request = require('request-promise');
 const { createFCToken, createLoginFCToken } = require('../utils/getFcToken');
 const browserIdentifier = '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"';
 const userAgent =
