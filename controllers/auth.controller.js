@@ -75,57 +75,82 @@ const initialPageRender = async () => {
 };
 
 //function to send otp on email
-const sendOtpOnEmail = async ({ userDetails, csrfToken, DUAIdToken, cookies, userAgentId, xb3TraceId }) => {
+const sendOtpOnEmail = async ({ userDetails, csrfToken, DUAIdToken, cookies, userAgentId, xb3TraceId, ctxViewId }) => {
     try {
-        const url = 'https://www.expedia.co.in/identity/email/otp/send';
-        let data = JSON.stringify({
-            username: userDetails.email,
-            email: userDetails.email,
-            resend: false,
-            channelType: 'WEB',
-            scenario: 'SIGNIN',
-            atoShieldData: {
-                atoTokens: {},
-                placement: 'loginemail',
-                csrfToken: csrfToken,
-                devices: [
-                    {
-                        payload:
-                            'eyJjb25maWd1cmVkRGVwZW5kZW5jaWVzIjpbeyJuYW1lIjoiaW92YXRpb25uYW1lIiwicGF5bG9hZCI6IjA0MDBpTVpWRHg4SjZ1TzVtWnd2VGZqRmU4YTh1WTlSaXhpRjlZOVVzTWhxRWUvcy8rVDBQWU5lSThDcTlESC9xSUZtcTVqZElQRzRrZmFFZjZMcVdXVms0d05FNitxcklKanhJS3dSK2NiOHBKbER5clhFczB5UEZ1ZjJ4UWIxdFc4bjZvcnU2WXhseHY5QzBRUWpwNmpjYmc1VDJhY0VVY1pYWDJ0TnpvcGhrMkN2dzdqTjIrVXpwOE5KaEk3SWFmY0ZEYVVUeFd4aG1EN3VsN3o2dlhva1drUjRGYlhlL1RMZUpDS2VQWEsrd3l5cXRlNUIySDJFd0Y0Q1QzUHFyTzNxazA3STlmQlZmUHlWNlIzZXJuZXE1eXlaV0hMRnZSVGRMTjc5eFBCRFMwVXpKSHdWVXBBTDNya0NKYTkxVUtxL3hWQVZpY1p0MFEvRUFZdlpZNU1pcFFYb2prNGJGOTFQT1YxK1piOHlXb2k1L1IyclRwenR3MXJCTVAyWEFEc1hwLzJZemY3RDFrZ0VMQ3crTVVKWTlYbmNqM3BiTzQzQlpSMVFlbklheU83dkprZHRQNkZxbitxWjFoSVdsUy9oTUxlanV0RzRoeExlcGY4MTBjbjlXU2dPK1VxcHhiKytLTmRkR3lKWHZvVURKSGVsUFBTekpSMWVCUHJmbHpKMFVWNjhxOUV1eUNpSXJ1a3dMRDNOMU9UUUhqeTdINVhoQm1TQ0dKWHpldmhQTDF5bWtOSzcvcnhVTjBzWUY4cjA4Zjh1Q2NDMHhPRFloOGVtTW53dVo1SlJteUMzY2ZjeFJXa1dIdTVnT3NXUU05c2FXWUZFY3J6Tk02ekJ5T0NQUWFmOTlFajBubkRkNXFxVEg2YnFxRFpLelNsRVROUm9obHo1d2xSRndXSmkwRlJ1bHJ1WFFZUW9ubXdST3VpQ2Z5Si9lZzhuTFY4SmRxSmF6WUZEVDh5eWVxMFpDTlBHSHJvQjFNVmJtalJZNEV3SXg5SnRiR2c0OEJBQTQ2TUI2eDJGSFh4b01aV0cycTBFdVJVbW5uTjFvdFE0aktJcm16NjF6aHpGQjFjbXV4ZkN5dHlZWWNqd2pzNUNhMi93QmRoaW05dksvVXNRNVhPWW0wT3FLYkF0amd6SE1HQWtMVExrRU40TDdFZkk4STdPUW10djhBWFlZcHZieXYxTEVPVnptSnREcWltd0xZNE14ekJnSkMweTVCRGVDK3hIeVBDT3prSnJiL0FGMkdLYjI4cjlTeGZ3S01jUklvZUpJTXlmQlNXdi92dW96WEtWQ3c5QUJmbWVHMm12V3RBMnZGUTNTeGdYeXZUeC95NEp3TFRFNE9zamFQL1BiYmpkUk9Oc3JObWxRMEYwS29lWEF2N0E5T3QreFZPTE1FQ1UxNXRGd2JiNU5rVnRyTkh6dDk1ZVBnWHMrb1FRYzYwdHJyR3RvNDRkRlovazBCNDh1eCtWNFN4d2h3Qm1OeWRJNlM2bGEwbGM3Q05Td2VqT1g1ZGhLREJBS0JJclJMYlJWS05RMFpGTFR4aHhVeU9vOGpLZExKRTc1YWdYUXRkajVtTlY2UXhnYmNsaGZJVWNGdXliTExOdlM5TEJaRUQ1b0hsTkp6RkdaZXhMSUJYM2sxT2hkdkFmekxYTlpLbVFqWE9lZTF5YUR4ZmhGZkVHWmZMcFZkaGVqY0ZNSmZhR1FucmdIU3VsSENaU0lwRGxXb09KNjFPZzNxa3VyVUZ5dFBYVlcxUndxaDl4dlBrOWZRTU1YY2NoWHhMaVFDV2xIa243K0dUbTZKME50ZGNJQ28vL0Nscjd3YkZDUDR3MkQxL1dVMnNTQXpQK0hYMW1PQWVZdko2Y0RLQXdqT3lTeFNqenRLME9wcWoxSGttb2h4amxZMWJFRVF1NlN1RUhHdVdPK1NWV1EvWExOSHY3NDE0Yldqb0VjZUVWUlkyU3NkVUJHMitEbDdUV2QrNlNYN1JjWTVQM1ZUZUsxQ1VhUTZnbHFTdmhqSFM3SkpiRW0va2dYNzFMNlE5OVNYTlRxbHIwMjgvM1BxL0YxRG5pT0x1Q2dFaVBLcE1WQlFuWlBESFpxSE5Dc0UvM1VBL1ZWYjdyZEpxTkFab1dKcEF1NWlxNnBaMVNYVWk1aDl1OEpGbnY0amF0eUhqOTNiVCtEb0thQWdVMXllNWpIenVLOFNIcnM5NGtydDRiVzZIeDcwelF6UEl5ZzVtN0JEN2tFWmFNVnB4WUFzTDBEU29XQ3BJS3Z6WEpiWWREdmZnMTJYdHQ5WUZrYjMyclE2SXpLRW9HZ0VnT05UYmJtK1VZSDRuL1VkUlpxMDhqdkNKRmJ2bzRVNGlmTU4yNUJpNkUzcUdEbnJYbXFxczdBUjY4V3RvbXpTYnUxeE5lY052VUxYczJtNmFvQUhZdDVZODlEZFdjOHQxMCtIeFJIZzkyQmpsQ29NMXorbi9YTDA4ZVNFSk1lRDR5elJEeXhES0pCcUJpY1QvWWRQZ04wMzJTT3ZJQTFFUWE2RlFzZld4ZlVLNXZJRzJXUyszU2htRVhicm5SUjFJOXVBdEZIQzhHblAzcXIvUFZKVzJycFhXK1FJT2pZb1FBNEtCaHh3a05CUTkxVkM4QjMxcitsME1USWlpY3BxLzRYRjVURlA3YjZ2OCtqTUh5VkwvQ2RGTG5GSEVyemI0aFRGUFdVTmpSKzd3SmoweUtwQ3dvcmpNQUh6Q01EMzRaTHVoZFRIWE9neUxjQzlZR0VKYjZ0ZHp2c1hqYXJqRzROWVIvOGdaSVBRS1YyLzZIbXpnNVFCOElNWndsM1NKUmdmTDZYR0tZa2Y4ZGpKam9lSU5LOWNadUoxVE4wYmRMTGdLMU8ycm1heW9XelRHM3JOL0xMQTJmLyt0aGdvVEh1N1NtSWlmL2lEdU1DZjg4TDJ5b0lPYXZSekdIUUtSaDJWZEoxV0VsWUszUFlpeXdYbHFkc3dkTk5WUUVxVStVZlNXUGJVQVlRa3krczhobXpkSlZwZUV0Y3NUZFRXV3QyankrUnE1b2EvMjI3K0owY1d4RTYzZkJKUkplSWM5V1U1MWxZMStyS0swMExOM05kMEE0alBPRGZRenNGbmxNa0NUSUxINGJHKzNaSkNMSTUwQ0VTNUh5NkJlaGpiMktPUnpvZHFvWkEvODhnVjFOdjI0V014V3BLWExpUFVET2g5MmlUSmFRNFNXc3hoeXpxVzRXRkpiNGFDbE9FdUNqY2c1VXg1OHJzUjdmdXFHTTJZYWkveVd0SmRUQkQzYkM4MzlhUWU0VDhseUsrRXNmWnBFSWhhREMzZXl6blBaTUdrNnFadkIwYWRHSWw5VDhoNUVBZ3RaNFozUHI5dFVQVzJYanVPZ2Z5amJWemJUTS8yZU5qeFFoOUx3UGhON3I2TWs4T2Vvcnl2TWdrR0wzZ0d1ZnRrU0wya3VYZmFadDNidzhrN0F0NFhpM0hET3JtYzJJdHRGY25WNEtLckNFVVF5SmFRZWRvT1hXRG1tWkNSdHE1eisxbGdwVEZqb2F5dGRWMGF0NEJ5MTZ6WjRQYTQyOFJBUnJmQ2U5L0lycUEzaUxHSWhyYmRRUXF2NFl0a3E0Rk10MnlTbFJ0bmRXTUg4Ukw3eUM3STA1Z1E9PSIsInN0YXR1cyI6IkNPTVBMRVRFIn1dLCJkaWFnbm9zdGljcyI6eyJ0aW1lVG9Qcm9kdWNlUGF5bG9hZCI6MTEzNiwiZXJyb3JzIjpbIkMxMTA0IiwiQzEwMDAiLCJDMTAwNCJdLCJkZXBlbmRlbmNpZXMiOlt7InRpbWVUb1Byb2R1Y2VQYXlsb2FkIjo1ODU1NCwiZXJyb3JzIjpbXSwibmFtZSI6ImlvdmF0aW9ubmFtZSJ9XX0sImV4ZWN1dGlvbkNvbnRleHQiOnsicmVwb3J0aW5nU2VnbWVudCI6IjI3LHd3dy5leHBlZGlhLmNvLmluLEV4cGVkaWEsVUxYIiwicmVxdWVzdFVSTCI6Imh0dHBzOi8vd3d3LmV4cGVkaWEuY28uaW4vbG9naW4/JnV1cmw9ZTNpZCUzRHJlZHIlMjZydXJsJTNEJTJGIiwidXNlckFnZW50IjoiTW96aWxsYS81LjAgKFdpbmRvd3MgTlQgMTAuMDsgV2luNjQ7IHg2NCkgQXBwbGVXZWJLaXQvNTM3LjM2IChLSFRNTCwgbGlrZSBHZWNrbykgQ2hyb21lLzEzMy4wLjAuMCBTYWZhcmkvNTM3LjM2IiwicGxhY2VtZW50IjoiTE9HSU4iLCJwbGFjZW1lbnRQYWdlIjoiMjciLCJzY3JpcHRJZCI6IjY4YTAwYzAzLWUwNjUtNDdkMy1iMDk4LWRkODYzOGI0YjM5ZSIsInZlcnNpb24iOiIxLjAiLCJ0cnVzdFdpZGdldFNjcmlwdExvYWRVcmwiOiJodHRwczovL3d3dy5leHBlZGlhLmNvbS90cnVzdFByb3h5L3R3LnByb2QudWwubWluLmpzIn0sInNpdGVJbmZvIjp7fSwic3RhdHVzIjoiQ09NUExFVEUiLCJwYXlsb2FkU2NoZW1hVmVyc2lvbiI6MX0=',
-                        type: 'TRUST_WIDGET',
+        const url = 'https://www.expedia.co.in/graphql';
+        let data = JSON.stringify([
+            {
+                operationName: 'InitialAuthFormSubmitMutation',
+                variables: {
+                    context: {
+                        siteId: 27,
+                        locale: 'en_GB',
+                        eapid: 0,
+                        tpid: 27,
+                        currency: 'INR',
+                        device: {
+                            type: 'DESKTOP',
+                        },
+                        identity: {
+                            duaid: DUAIdToken,
+                            authState: 'ANONYMOUS',
+                        },
+                        privacyTrackingState: 'CAN_TRACK',
+                        debugContext: {
+                            abacusOverrides: [],
+                        },
                     },
-                ],
+                    request: {
+                        atoInputs: [
+                            {
+                                type: 'CSRF',
+                                inputs: [
+                                    {
+                                        key: 'token',
+                                        value: csrfToken,
+                                    },
+                                ],
+                            },
+                            {
+                                inputs: [],
+                                type: 'TRUST_WIDGET',
+                            },
+                        ],
+                        referrerURL: '/',
+                        emailInput: userDetails.email,
+                    },
+                    identityClientContext: {
+                        pageLocation: 'ENTRY',
+                    },
+                },
+                extensions: {
+                    persistedQuery: {
+                        version: 1,
+                        sha256Hash: 'c8b9dbc0b96b430e305ad519ae5748a49b416b2a520a9bdbabf5a3b767a89652',
+                    },
+                },
             },
-        });
+        ]);
 
         const headers = {
-            accept: 'application/json',
+            accept: '*/*',
             'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-            brand: 'expedia',
+            'client-info': 'eg-auth-ui-v2,8eb087574902cef0a5ee8fc94349ddaa9b007c77,us-west-2',
             'content-type': 'application/json',
             cookie: cookies,
-            'device-type': 'DESKTOP',
-            'device-user-agent-id': DUAIdToken,
-            eapid: '0',
+            'ctx-view-id': ctxViewId,
             origin: 'https://www.expedia.co.in',
-            pointofsaleid: '',
             priority: 'u=1, i',
-            referer: 'https://www.expedia.co.in/login?&uurl=e3id%3Dredr%26rurl%3D%2F',
+            referer: 'https://www.expedia.co.in/verifyotp?uurl=e3id%3Dredr%26rurl%3D%2F&scenario=SIGNIN&path=email',
             'sec-ch-ua': browserIdentifier,
             'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Linux   "',
+            'sec-ch-ua-platform': '"Linux"',
             'sec-fetch-dest': 'empty',
             'sec-fetch-mode': 'cors',
             'sec-fetch-site': 'same-origin',
-            siteid: '27',
-            tpid: '27',
-            'trace-id': xb3TraceId,
             'user-agent': userAgent,
-            'x-b3-traceid': xb3TraceId,
-            'x-mc1-guid': DUAIdToken,
-            'x-remote-addr': 'undefined',
-            'x-user-agent': 'undefined',
-            'x-xss-protection': '1; mode=block',
+            'x-hcom-origin-id': 'Login',
+            'x-page-id': 'Login',
         };
 
         let config = {
@@ -903,6 +928,7 @@ const registerProcess = async (req, res) => {
             cookies: initialPage.initialPageCookies,
             userAgentId: initialPage.userAgentId,
             xb3TraceId: initialPage.xb3TraceId,
+            ctxViewId: initialPage.ctxViewId,
         });
 
         if (sendEmailResponse.status !== 200)
